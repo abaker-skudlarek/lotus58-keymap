@@ -10,152 +10,220 @@
 #include <dt-bindings/zmk/outputs.h>
 #include <dt-bindings/zmk/pointing.h>
 
-
-#define default_layer 0
-#define raise_layer 1
-#define lower_layer 2
-#define adjust_layer 3
-#define extra_layer 4
 /*
-// Encoders
+ * LAYER ORDER MATTERS.
+ * ZMK resolves a keypress by looking at every active layer and using the
+ * HIGHEST-numbered one that isn't &trans. So the order below is deliberate:
+ *
+ *   BASE (0) < LINUX (1) < SYM (2) < GAME (3) < NAV (4)
+ *
+ * - NAV must sit above GAME, otherwise holding the NAV key while gaming would
+ *   activate NAV underneath the gaming layer and you'd never see it.
+ * - LINUX is a tiny "overlay" that is normally OFF. It changes one key (see below).
+ *   It must sit BELOW SYM so that holding SYM stops the BASE<->GAME combos from firing.
+ *
+ * Mapping to your names:
+ *   BASE = Coding layer 1   SYM = Coding layer 2
+ *   NAV  = Coding layer 3   GAME = Gaming layer
+ *
+ * Layer 0 is the "default layer" and is always active at the bottom of the stack.
+ */
+#define BASE  0
+#define LINUX 1
+#define SYM   2
+#define GAME  3
+#define NAV   4
 
-&sensors { triggers-per-rotation = <30>; };
-
-&left_encoder { steps = <60>; };
-
-&right_encoder { steps = <60>; };
-
-*/
-
-// To get to Adjust layer hold both Lower and Raise together.
-
+/*
+ * Key positions. Numbering is left-to-right, top-to-bottom:
+ *    0-11  number row (Lotus only - not on the Corne, left alone on SYM/NAV)
+ *   12-23  Q row      (Corne top row)
+ *   24-37  A row      (Corne home row). 30 is NOT a key on your board (it's the screen);
+ *                     31 is the right encoder click.
+ *   38-51  Z row      (Corne bottom row; 44, 45 = the two inner keys, used for the game combo)
+ *   52-55  left thumbs   (52 spare | 53 = Corne outer, 54 = Corne middle, 55 = Corne inner)
+ *   56-59  right thumbs  (56 = Corne inner, 57 = Corne middle, 58 = Corne outer | 59 spare)
+ */
 
 / {
-    combos {
-        compatible = "zmk,combos";
-        combo_dsklg {
-            timeout-ms = <100>;
-            key-positions = <24 52>;
-            layers = <0>;
-            bindings = <&kp LGUI>;
+    macros {
+        // Vim macro replays from the work layout (M3 / M4): types "@q" / "@w".
+        macro_at_q: macro_at_q {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&macro_tap &kp AT &kp Q>;
+        };
+
+        macro_at_w: macro_at_w {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&macro_tap &kp AT &kp W>;
         };
     };
 
     behaviors {
-        fofunc: four_ffour {
-            compatible = "zmk,behavior-mod-morph";
-            #binding-cells = <0>;
-            bindings = <&kp N4>, <&kp F4>;
-            mods = <(MOD_LALT|MOD_RALT)>;
+        // Right encoder as a mouse scroll wheel: turn right = scroll down, turn left = scroll up.
+        // On this board's right encoder the FIRST binding fires on a turn to the LEFT and the
+        // second on a turn to the right (same as the original template's volume knob:
+        // "C_VOL_DN C_VOL_UP"), so the order below looks backwards but isn't.
+        // ZMK presses then releases the bound behavior for each encoder click. A scroll press
+        // only produces output once it has been held for a short while, so tap-ms is raised
+        // from its small default. If scrolling is too slow/fast or does nothing, tune tap-ms
+        // (or the speed in the SCRL_ bindings). If it scrolls backwards, swap the two bindings.
+        scroll_enc: scroll_enc {
+            compatible = "zmk,behavior-sensor-rotate";
+            #sensor-binding-cells = <0>;
+            bindings = <&msc SCRL_UP>, <&msc SCRL_DOWN>;
+            tap-ms = <40>;
         };
-        sleft: s_left {
-            compatible = "zmk,behavior-mod-morph";
-            #binding-cells = <0>;
-            bindings = <&kp S>, <&kp LEFT>;
-            mods = <(MOD_LGUI|MOD_RGUI)>;
+    };
+
+    combos {
+        compatible = "zmk,combos";
+
+        // BASE -> GAME: press both inner bottom-row keys (44 + 45) together.
+        // &tog GAME turns the gaming layer on and it STAYS on. (We use &tog rather than &to
+        // so that a Linux-mode setting underneath survives a trip into the game layer.)
+        // 'layers' = the highest active layer the combo may fire on: only plain BASE
+        // (or BASE + the LINUX overlay) - not while holding SYM/NAV, not while gaming.
+        combo_to_game {
+            timeout-ms = <50>;
+            key-positions = <44 45>;
+            layers = <BASE LINUX>;
+            bindings = <&tog GAME>;
         };
-        fright: f_right {
-            compatible = "zmk,behavior-mod-morph";
-            #binding-cells = <0>;
-            bindings = <&kp F>, <&kp RIGHT>;
-            mods = <(MOD_LGUI|MOD_RGUI)>;
+
+        // GAME -> BASE: same two keys, only active while on the gaming layer.
+        // &tog GAME again turns it off, dropping you back onto BASE (or BASE + LINUX).
+        combo_to_base {
+            timeout-ms = <50>;
+            key-positions = <44 45>;
+            layers = <GAME>;
+            bindings = <&tog GAME>;
         };
     };
 
     keymap {
         compatible = "zmk,keymap";
 
-        default_layer {
-            display-name = "Default Layer";
-//   ------------------------------------------------------------------------------------------------------------
-//  0|  ESC  |  1  |  2  |  3   |  4   |  5   |                     |  6   |  7    |  8    |  9   |   0   |   =   | 11
-// 12|  TAB  |  Q  |  W  |  E   |  R   |  T   |                     |  Y   |  U    |  I    |  O   |   P   |   [   | 23
-// 24|  SFT  |  A  |  S  |  D   |  F   |  G   |  RESET  |  | RESET  |  H   |  J    |  K    |  L   |   ;   | ' SFT | 37
-// 38|  CTRL |  Z  |  X  |  C   |  V   |  B   |  MUTE   |  | PLAY   |  N   |  M    |  ,    |  .   |   /   | \ CTRL| 51
-// 52                    |ENT RS|  ALT | SPACE|DELETE LW|  |ENTER RS| BSPC |  ] LW | RGUI  |                        59
+        // ---------------------------------------------------------------------------------
+        // Coding layer 1 (default) - matches the work Corne base layer.
+        //   pos 24 (home-row pinky): hold = NAV (coding 3)
+        //   pos 54 (left middle thumb): hold = SYM (coding 2)
+        //   pos 53 (left outer thumb): LCTRL here (Windows). See the LINUX layer for Super.
+        //   pos 52 (left outermost thumb): LALT
+        // Number row (0-11) is Lotus-only, so it's just numbers.
+        // pos 44 / 45 are unbound - they're the BASE<->GAME combo keys (and [ ] live on SYM).
+        // pos 31 = encoder click (mute); pos 30 isn't a key.
+        // ---------------------------------------------------------------------------------
+        base_layer {
+            display-name = "Coding 1";
             bindings = <
-&kp ESC   &kp N1 &kp N2   &kp N3     &kp N4   &kp N5                               &kp N6    &kp N7      &kp N8    &kp N9   &kp N0   &kp EQUAL
-&kp TAB   &kp Q  &kp W    &kp E      &kp R     &kp T                                &kp Y     &kp U       &kp I     &kp O    &kp P    &kp BSPC
-&kp LSHFT &kp A  &kp S   &kp D      &kp F   &kp G      &trans         &kp C_MUTE     &kp H     &kp J       &kp K     &kp L    &kp SEMI &mt RSHFT SQT
-&kp LCTRL &kp Z  &kp X    &kp C      &kp V     &kp B      &kp LBKT     &kp RBKT   &kp N     &kp M       &kp COMMA &kp DOT  &kp FSLH &mt RCTRL BSLH
-                          &kp LGUI  &kp LALT  &mo 1  &kp SPACE      &kp RET  &mo 2  &kp DEL  &kp LGUI
+&kp ESC   &kp N1 &kp N2 &kp N3  &kp N4   &kp N5                              &kp N6    &kp N7  &kp N8    &kp N9   &kp N0   &kp EQUAL
+&kp TAB   &kp Q  &kp W  &kp E   &kp R    &kp T                               &kp Y     &kp U   &kp I     &kp O    &kp P    &kp ESC
+&mo NAV   &kp A  &kp S  &kp D   &kp F    &kp G   &none       &kp C_MUTE      &kp H     &kp J   &kp K     &kp L    &kp SEMI &kp SQT
+&kp LSHFT &kp Z  &kp X  &kp C   &kp V    &kp B   &none       &none           &kp N     &kp M   &kp COMMA &kp DOT  &kp FSLH &kp RALT
+                        &kp LALT &kp LCTRL &mo SYM &kp SPACE  &kp BSPC &kp RET &kp RCTRL &none
             >;
 
-            sensor-bindings = <&inc_dec_kp PG_UP PG_DN &inc_dec_kp C_VOL_DN C_VOL_UP>;
+            sensor-bindings = <&inc_dec_kp PG_UP PG_DN &scroll_enc>;
         };
 
-        lower_layer {
-            display-name = "Lower Layer";
-// ------------------------------------------------------------------------------------------------------------
-// | `     |  F1 |  F2 |  F3  |  F4  |  F5  |                   |  F6  |  F7   |  F8   |  F9  |  F10  |  F11  |
-// |       |  !  | HOME|   ^  |  END |  %   |                   | VOL^ |  PGUP |  INS  |  ^   |  PSCR |   -   |
-// |       |  #  |  <- |   v  | ->   |  $   |        |  |       | VOLv |    <- |   ^   |  ->  |   ~   |   _   |
-// |       |  @  |  -  |  (   |  )   |  &   |        |  |       | MUTE |  PGDN |   v   |  :   |   *   |   |   |
-//                     |  F11 |      |      |        |  |       |      |       |  F12  |
+        // ---------------------------------------------------------------------------------
+        // LINUX overlay. Normally OFF. Toggle it with the &tog LINUX key on the NAV layer.
+        // While on, it changes ONE key: pos 53 becomes LGUI (Super, for Omarchy/Hyprland)
+        // instead of LCTRL. Everything else is &trans, so it falls through to whatever is
+        // below (BASE). ZMK can't detect which OS it's plugged into, so this is a manual switch.
+        // The nice_view shows this layer's name while it's the top layer, as an indicator.
+        // ---------------------------------------------------------------------------------
+        linux_layer {
+            display-name = "Coding 1 Linux";
             bindings = <
-&kp GRAVE  &kp F1    &kp F2    &kp F3      &kp F4     &kp F5                     &kp F6        &kp F7     &kp F8    &kp F9     &kp F10   &kp PLUS
-&trans     &kp EXCL  &kp HOME  &kp UP      &kp END    &kp PRCNT                  &kp C_VOL_UP  &kp PG_UP  &kp INS   &kp CARET  &kp PSCRN &kp MINUS
-&trans     &kp HASH  &kp LEFT  &kp DOWN    &kp RIGHT  &kp DLLR  &trans   &trans  &kp C_VOL_DN  &kp LEFT   &kp UP    &kp RIGHT  &kp TILDE &kp UNDER
-&trans     &kp AT    &kp MINUS &kp LBRC    &kp RBRC   &kp AMPS  &trans   &trans  &kp C_MUTE    &kp PG_DN  &kp DOWN  &kp COLON  &kp STAR  &kp PIPE
-                               &kp F11     &trans     &trans    &trans   &trans  &mo 3        &trans     &kp F12
+&trans    &trans   &trans   &trans   &trans   &trans                        &trans    &trans    &trans    &trans    &trans    &trans
+&trans    &trans   &trans   &trans   &trans   &trans                        &trans    &trans    &trans    &trans    &trans    &trans
+&trans    &trans   &trans   &trans   &trans   &trans   &trans   &trans      &trans    &trans    &trans    &trans    &trans    &trans
+&trans    &trans   &trans   &trans   &trans   &trans   &trans   &trans      &trans    &trans    &trans    &trans    &trans    &trans
+                            &trans   &kp LGUI &trans   &trans    &trans   &trans    &trans    &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp PG_UP PG_DN &scroll_enc>;
+        };
+
+        // ---------------------------------------------------------------------------------
+        // Coding layer 2: numbers + symbols (Corne layer 1). Hold pos 54 on BASE.
+        // The Corne has no number row, so its top row holds 1-5 / 6-0 here; the Lotus's own
+        // number row is left as &trans. Legends on the sheet show the shifted symbol above
+        // the key, so each key sends the unshifted one (1, [, \ ...).
+        //
+        // GUESSES - these keys were inked over on the sheet, please check:
+        //   pos 46 = _   47 = -   49 = (left as &trans -> '.')   50 = &   51 = ^
+        // ---------------------------------------------------------------------------------
+        sym_layer {
+            display-name = "Coding 2";
+            bindings = <
+&trans    &trans   &trans   &trans   &trans   &trans                        &trans    &trans    &trans    &trans    &trans    &trans
+&trans    &kp N1   &kp N2   &kp N3   &kp N4   &kp N5                        &kp N6    &kp N7    &kp N8    &kp N9    &kp N0    &kp EQUAL
+&kp GRAVE &kp TILDE &kp LT  &kp LBKT &kp LPAR &kp LBRC &trans   &trans      &kp RBRC  &kp RPAR  &kp RBKT  &kp GT    &kp PLUS  &kp BSLH
+&trans    &kp EXCL &kp AT   &kp HASH &kp DLLR &kp PRCNT &trans  &trans      &kp UNDER &kp MINUS &kp STAR  &trans    &kp AMPS  &kp CARET
+                            &trans   &trans   &trans   &trans    &trans   &trans    &trans    &trans
             >;
 
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_NEXT C_PREV>;
         };
 
-        raise_layer {
-            display-name = "Raise Layer";
-// ------------------------------------------------------------------------------------------------------------
-// |BTCLR| BT1  | BT2  |  BT3  |  BT4  |  BT5 |                |OUTTOG|OUTUSB| OUTBT |      | RESET | FLASH |
-// |     | INS  | PSCR | GUI   | RESET |      |                | PGUP |      |   ^   |      |       |       |
-// |     | ALT  | CTRL | SHIFT | FLASH | CAPS |      |  |      | PGDN |   <- |   v   |  ->  |  DEL  | BSPC  |
-// |     | UNDO | CUT  | COPY  | PASTE |      |      |  |      |      |  |>  |  <|<| | |>|> |       |       |
-//                     |       |       |      |      |  |      |      |      |       |
+        // ---------------------------------------------------------------------------------
+        // Gaming layer. Reached by the 44+45 combo from BASE; the same combo returns.
+        // Every key is spelled out (no &trans) so nothing leaks through from BASE - in
+        // particular the SYM hold key at pos 54 is NOT active here.
+        // Differences from BASE: CAPS on the home-row pinky (where NAV is on BASE), a normal
+        // left-hand Tab / Caps / Shift / Ctrl / Alt column, no GUI key, no layer key on the
+        // home row. NAV is held with the left middle thumb (pos 54) instead.
+        // ---------------------------------------------------------------------------------
+        game_layer {
+            display-name = "Gaming";
             bindings = <
-&bt BT_CLR_ALL &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2 &bt BT_SEL 3 &bt BT_SEL 4                    &out OUT_TOG  &out OUT_USB  &out OUT_BLE  &trans     &sys_reset  &bootloader
-&trans     &kp INS      &kp PSCRN    &kp K_CMENU  &sys_reset       &studio_unlock                          &kp PG_UP     &trans        &kp UP        &trans     &trans  &trans
-&trans     &kp LALT     &kp LCTRL    &kp LSHFT    &bootloader  &kp CLCK     &trans   &trans    &kp PG_DN     &kp LEFT      &kp DOWN      &kp RIGHT  &kp DEL &kp BSPC
-&trans     &kp K_UNDO   &trans    &trans   &trans  &trans       &trans   &trans    &trans        &kp C_PP      &kp C_PREV    &kp C_NEXT &trans  &trans
-                                     &trans       &trans       &mo 3       &trans   &trans    &trans        &trans        &trans
+&kp ESC   &kp N1 &kp N2 &kp N3  &kp N4   &kp N5                              &kp N6    &kp N7  &kp N8    &kp N9   &kp N0   &kp EQUAL
+&kp TAB   &kp Q  &kp W  &kp E   &kp R    &kp T                               &kp Y     &kp U   &kp I     &kp O    &kp P    &kp BSPC
+&kp CAPS  &kp A  &kp S  &kp D   &kp F    &kp G   &none       &kp C_MUTE         &kp H     &kp J   &kp K     &kp L    &kp SEMI &kp SQT
+&kp LSHFT &kp Z  &kp X  &kp C   &kp V    &kp B   &none       &none           &kp N     &kp M   &kp COMMA &kp DOT  &kp FSLH &kp BSLH
+                        &kp LALT &kp LCTRL &mo NAV &kp SPACE  &kp BSPC &kp RET &kp RCTRL &none
             >;
 
-            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp PG_UP PG_DN>;
+            sensor-bindings = <&inc_dec_kp PG_UP PG_DN &inc_dec_kp C_VOL_DN C_VOL_UP>;
         };
-        adjust_layer {
-            display-name = "Adjust Layer";
-// ------------------------------------------------------------------------------------------------------------
-// |BTCLR| BT1  | BT2  |  BT3  |  BT4  |  BT5 |                |OUTTOG|OUTUSB| OUTBT |      | RESET | FLASH |
-// |     | INS  | PSCR | GUI   | RESET |      |                | PGUP |      |   ^   |      |       |       |
-// |     | ALT  | CTRL | SHIFT | FLASH | CAPS |      |  |      | PGDN |   <- |   v   |  ->  |  DEL  | BSPC  |
-// |     | UNDO | CUT  | COPY  | PASTE |      |      |  |      |      |  |>  |  <|<| | |>|> |       |       |
-//                     |       |       |      |      |  |      |      |      |       |
+
+        // ---------------------------------------------------------------------------------
+        // Coding layer 3: function keys, arrows, media, macros (Corne layer 2).
+        // Hold pos 24 from BASE, or pos 54 from GAME. It sits on top of the stack while held,
+        // so releasing drops you back to whichever layer you were on. &trans keys fall through
+        // to GAME (if gaming) or BASE, so e.g. Shift and WASD keep working.
+        //
+        // Number row (0-11): Lotus-only, so I used it for Bluetooth select/clear, bootloader,
+        // and the Windows/Linux switch (pos 6 = &tog LINUX).
+        // Windows virtual desktops (D1-D4 on the sheet):
+        //   pos 27 = previous desktop  (Win+Ctrl+Left)
+        //   pos 28 = next desktop      (Win+Ctrl+Right)
+        //   pos 29 = new desktop       (Win+Ctrl+D)
+        //   pos 26 = (D1, unassigned)
+        // Other keys, from the notes on the sheet:
+        //   M0 screenshot = Win+Shift+S (Snipping Tool), M1 screen recorder = Win+Alt+R (Xbox Game Bar)
+        //   M2 = Ctrl+Shift+F10 (PyCharm: run current file)
+        //   M3 / M4 = macros typing "@q" / "@w"
+        //   pos 57 = Ctrl+B (tmux prefix)
+        // F7 / F8 = VS Code prev / next terminal (just the function keys, as on the sheet).
+        // pos 44 = Studio unlock (needed to edit this keymap live with ZMK Studio).
+        // ---------------------------------------------------------------------------------
+        nav_layer {
+            display-name = "Coding 3";
             bindings = <
-&trans &trans &trans &trans &trans &trans                    &trans  &trans  &trans  &trans     &trans  &trans
-&trans &trans &mmv MOVE_UP &trans &trans &msc SCRL_UP                    &trans  &trans  &trans  &trans     &trans  &trans
-&trans     &mmv MOVE_LEFT     &mmv MOVE_DOWN    &mmv MOVE_RIGHT    &trans  &msc SCRL_DOWN     &trans   &trans    &trans     &trans      &trans      &trans  &trans &trans
-&trans     &trans   &trans    &trans   &trans  &trans       &trans   &trans    &trans        &trans      &trans    &trans &trans  &trans
-                                     &mkp LCLK       &mkp RCLK       &trans       &trans   &trans    &trans        &trans        &trans
+&trans    &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2 &bt BT_SEL 3 &bt BT_SEL 4              &tog LINUX &trans    &trans    &trans    &bootloader &bt BT_CLR
+&kp TAB   &kp F1   &kp F2   &kp F3   &kp F4   &kp F5                        &kp F6     &kp F7    &kp F8    &kp F9    &kp F10   &trans
+&trans    &trans   &trans   &kp LG(LC(LEFT)) &kp LG(LC(RIGHT)) &kp LG(LC(D)) &trans &trans  &kp LEFT   &kp DOWN  &kp UP    &kp RIGHT &trans    &trans
+&trans    &macro_at_q &macro_at_w &kp LG(LA(R)) &kp LG(LS(S)) &kp LC(LS(F10)) &studio_unlock &trans  &kp C_PREV &kp C_PP &kp C_NEXT &kp C_VOL_DN &kp C_VOL_UP &kp RALT
+                            &trans   &trans   &trans   &trans    &trans   &kp LC(B) &trans    &trans
             >;
 
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp PG_UP PG_DN>;
         };
     };
-        extra_layer {
-            display-name = "Extra Layer";
-// ------------------------------------------------------------------------------------------------------------
-// |BTCLR| BT1  | BT2  |  BT3  |  BT4  |  BT5 |                |OUTTOG|OUTUSB| OUTBT |      | RESET | FLASH |
-// |     | INS  | PSCR | GUI   | RESET |      |                | PGUP |      |   ^   |      |       |       |
-// |     | ALT  | CTRL | SHIFT | FLASH | CAPS |      |  |      | PGDN |   <- |   v   |  ->  |  DEL  | BSPC  |
-// |     | UNDO | CUT  | COPY  | PASTE |      |      |  |      |      |  |>  |  <|<| | |>|> |       |       |
-//                     |       |       |      |      |  |      |      |      |       |
-            bindings = <
-&trans &trans &trans &trans &trans &trans                    &trans  &trans  &trans  &trans     &trans  &trans
-&trans &trans &mmv MOVE_UP &trans &trans &msc SCRL_UP                    &trans  &trans  &trans  &trans     &trans  &trans
-&trans     &mmv MOVE_LEFT     &mmv MOVE_DOWN    &mmv MOVE_RIGHT    &trans  &msc SCRL_DOWN     &trans   &trans    &trans     &trans      &trans      &trans  &trans &trans
-&trans     &trans   &trans    &trans   &trans  &trans       &trans   &trans    &trans        &trans      &trans    &trans &trans  &trans
-                                     &mkp LCLK       &mkp RCLK       &trans       &trans   &trans    &trans        &trans        &trans
-            >;
-
-            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp PG_UP PG_DN>;
-        };
 };
