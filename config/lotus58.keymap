@@ -46,21 +46,6 @@
  */
 
 / {
-    macros {
-        // Vim macro replays from the work layout (M3 / M4): types "@q" / "@w".
-        macro_at_q: macro_at_q {
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings = <&macro_tap &kp AT &kp Q>;
-        };
-
-        macro_at_w: macro_at_w {
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings = <&macro_tap &kp AT &kp W>;
-        };
-    };
-
     behaviors {
         // Right encoder as a mouse scroll wheel: turn right = scroll down, turn left = scroll up.
         // On this board's right encoder the FIRST binding fires on a turn to the LEFT and the
@@ -117,7 +102,7 @@
         // pos 31 = encoder click (mute); pos 30 isn't a key.
         // ---------------------------------------------------------------------------------
         base_layer {
-            display-name = "Coding 1";
+            display-name = "BASE";
             bindings = <
 &kp ESC   &kp N1 &kp N2 &kp N3  &kp N4   &kp N5                              &kp N6    &kp N7  &kp N8    &kp N9   &kp N0   &kp EQUAL
 &kp TAB   &kp Q  &kp W  &kp E   &kp R    &kp T                               &kp Y     &kp U   &kp I     &kp O    &kp P    &kp ESC
@@ -134,10 +119,11 @@
         // While on, it changes ONE key: pos 53 becomes LGUI (Super, for Omarchy/Hyprland)
         // instead of LCTRL. Everything else is &trans, so it falls through to whatever is
         // below (BASE). ZMK can't detect which OS it's plugged into, so this is a manual switch.
-        // The nice_view shows this layer's name while it's the top layer, as an indicator.
+        // The nice_view shows this layer's name ("LINUX") while it's the top layer, as an indicator.
+        // (The gem screen upper-cases names and cuts them off after 9 characters.)
         // ---------------------------------------------------------------------------------
         linux_layer {
-            display-name = "Coding 1 Linux";
+            display-name = "Linux";
             bindings = <
 &trans    &trans   &trans   &trans   &trans   &trans                        &trans    &trans    &trans    &trans    &trans    &trans
 &trans    &trans   &trans   &trans   &trans   &trans                        &trans    &trans    &trans    &trans    &trans    &trans
@@ -159,7 +145,7 @@
         //   pos 46 = _   47 = -   49 = (left as &trans -> '.')   50 = &   51 = ^
         // ---------------------------------------------------------------------------------
         sym_layer {
-            display-name = "Coding 2";
+            display-name = "SYM";
             bindings = <
 &trans    &trans   &trans   &trans   &trans   &trans                        &trans    &trans    &trans    &trans    &trans    &trans
 &trans    &kp N1   &kp N2   &kp N3   &kp N4   &kp N5                        &kp N6    &kp N7    &kp N8    &kp N9    &kp N0    &kp EQUAL
@@ -178,14 +164,16 @@
         // Differences from BASE: CAPS on the home-row pinky (where NAV is on BASE), a normal
         // left-hand Tab / Caps / Shift / Ctrl / Alt column, no GUI key, no layer key on the
         // home row. NAV is held with the left middle thumb (pos 54) instead.
+        // pos 44 / 45 (the combo keys) send [ and ] when tapped alone, so games can bind them.
+        // Pressing both together still toggles back to BASE.
         // ---------------------------------------------------------------------------------
         game_layer {
-            display-name = "Gaming";
+            display-name = "GAME";
             bindings = <
 &kp ESC   &kp N1 &kp N2 &kp N3  &kp N4   &kp N5                              &kp N6    &kp N7  &kp N8    &kp N9   &kp N0   &kp EQUAL
 &kp TAB   &kp Q  &kp W  &kp E   &kp R    &kp T                               &kp Y     &kp U   &kp I     &kp O    &kp P    &kp BSPC
 &kp CAPS  &kp A  &kp S  &kp D   &kp F    &kp G   &none       &kp C_MUTE         &kp H     &kp J   &kp K     &kp L    &kp SEMI &kp SQT
-&kp LSHFT &kp Z  &kp X  &kp C   &kp V    &kp B   &none       &none           &kp N     &kp M   &kp COMMA &kp DOT  &kp FSLH &kp BSLH
+&kp LSHFT &kp Z  &kp X  &kp C   &kp V    &kp B   &kp LBKT    &kp RBKT        &kp N     &kp M   &kp COMMA &kp DOT  &kp FSLH &kp BSLH
                         &kp LALT &kp LCTRL &mo NAV &kp SPACE  &kp BSPC &kp RET &kp RCTRL &none
             >;
 
@@ -203,26 +191,22 @@
         // Bootloader keys: pos 0 (far-left key, top row) puts the LEFT half into bootloader
         // mode and pos 10 puts the RIGHT half into it - each reboots the half it's pressed on.
         // Hold NAV, then press. You can also always double-tap the reset button instead.
-        // Windows virtual desktops (D1-D4 on the sheet):
-        //   pos 27 = previous desktop  (Win+Ctrl+Left)
-        //   pos 28 = next desktop      (Win+Ctrl+Right)
-        //   pos 29 = new desktop       (Win+Ctrl+D)
-        //   pos 26 = (D1, unassigned)
-        // Other keys, from the notes on the sheet:
-        //   M0 screenshot = Win+Shift+S (Snipping Tool), M1 screen recorder = Win+Alt+R (Xbox Game Bar)
-        //   M2 = Ctrl+Shift+F10 (PyCharm: run current file)
-        //   M3 / M4 = macros typing "@q" / "@w"
+        // Left half is set up for gaming (NAV is held with pos 54 while on GAME):
+        //   W A S D (pos 14, 25, 26, 27) are &trans, so they pass straight through.
+        //   F1 = Q, F2 = E, F3 = R, F5 = T, F4 = F, F6 = G   (F6 is also at pos 18)
+        //   N = C, M = V   (so games can use them without reaching to the right half)
+        //   CAPS on the home-row pinky, LSHFT on the bottom-row pinky (pos 24 / 38)
         //   pos 57 = Ctrl+B (tmux prefix)
         // F7 / F8 = VS Code prev / next terminal (just the function keys, as on the sheet).
         // pos 44 = Studio unlock (needed to edit this keymap live with ZMK Studio).
         // ---------------------------------------------------------------------------------
         nav_layer {
-            display-name = "Coding 3";
+            display-name = "NAV";
             bindings = <
 &bootloader &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2 &bt BT_SEL 3 &bt BT_SEL 4              &tog LINUX &trans    &trans    &trans    &bootloader &bt BT_CLR
-&kp TAB   &kp F1   &kp F2   &kp F3   &kp F4   &kp F5                        &kp F6     &kp F7    &kp F8    &kp F9    &kp F10   &trans
-&trans    &trans   &trans   &kp LG(LC(LEFT)) &kp LG(LC(RIGHT)) &kp LG(LC(D)) &trans &trans  &kp LEFT   &kp DOWN  &kp UP    &kp RIGHT &trans    &trans
-&trans    &macro_at_q &macro_at_w &kp LG(LA(R)) &kp LG(LS(S)) &kp LC(LS(F10)) &studio_unlock &trans  &kp C_PREV &kp C_PP &kp C_NEXT &kp C_VOL_DN &kp C_VOL_UP &kp RALT
+&kp TAB   &kp F1   &trans   &kp F2   &kp F3   &kp F5                        &kp F6     &kp F7    &kp F8    &kp F9    &kp F10   &trans
+&kp CAPS  &trans   &trans   &trans   &kp F4   &kp F6   &trans   &trans      &kp LEFT   &kp DOWN  &kp UP    &kp RIGHT &trans    &trans
+&kp LSHFT &trans   &trans   &kp N    &kp M    &trans   &studio_unlock &trans  &kp C_PREV &kp C_PP &kp C_NEXT &kp C_VOL_DN &kp C_VOL_UP &kp RALT
                             &trans   &trans   &trans   &trans    &trans   &kp LC(B) &trans    &trans
             >;
 
