@@ -15,7 +15,7 @@ Every version you flash gets a version number (`v1`, `v2`, ...) and a GitHub Rel
    git push origin v2
    ```
 4. Wait for the **Release firmware** run in the **Actions** tab to finish. It creates a Release on the repo's **Releases** page with the firmware, the keymap picture, and your note.
-5. Download the release's `firmware-v2.zip` and unzip it into **`firmware/v2/`** in this repo folder. Git ignores the `firmware/` folder, so each version's files stay local and labelled. `firmware/v1/` holds the first version.
+5. Download the release's `firmware-v2.zip` and unzip it into **`firmware/v2/`** in this repo folder. The zip holds the `.uf2` files and `lotus58.svg`, the picture of that version's keymap. Git ignores the `firmware/` folder, so each version's files stay local and labelled. `firmware/v1/` holds the first version.
 
 To try something without making a version, skip steps 3–4. Download the **firmware** zip from the Actions run's **Artifacts** instead (these expire after 90 days).
 

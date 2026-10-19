@@ -43,8 +43,10 @@ jobs:
           name: drawings
           path: release/drawings
 
+      # The zip gets the keymap picture too, so firmware/<version>/ locally has both
       - name: Package
         run: |
+          cp release/drawings/*.svg release/firmware/
           cd release/firmware
           zip -r "../firmware-${GITHUB_REF_NAME}.zip" .
 
