@@ -1,0 +1,58 @@
+# Pushing a version tag (v1, v2, ...) builds the firmware, draws the keymap, and publishes a
+# GitHub Release with the .uf2 files and the keymap picture attached. Release files don't
+# expire, unlike normal Actions downloads (90 days).
+#
+#   git tag -a v2 -m "What changed in this version"
+#   git push origin v2
+name: Release firmware
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.3
+
+  draw:
+    uses: caksoylar/keymap-drawer/.github/workflows/draw-zmk.yml@main
+    with:
+      keymap_patterns: "config/lotus58.keymap"
+      destination: artifact
+
+  release:
+    needs: [build, draw]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # actions/checkout doesn't keep the annotated tag's message, which becomes the release notes
+      - name: Fetch tag
+        run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: release/firmware
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: drawings
+          path: release/drawings
+
+      - name: Package
+        run: |
+          cd release/firmware
+          zip -r "../firmware-${GITHUB_REF_NAME}.zip" .
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-from-tag \
+            release/firmware-*.zip release/firmware/*.uf2 release/drawings/*.svg

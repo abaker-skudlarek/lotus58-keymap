@@ -1,2 +1,6 @@
 
 .zmk/
+
+# Built firmware lives locally in firmware/<version>/ (downloaded from GitHub Releases), not in git
+firmware/
+firmware*.zip
