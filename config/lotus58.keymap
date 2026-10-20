@@ -15,16 +15,18 @@
  * ZMK resolves a keypress by looking at every active layer and using the
  * HIGHEST-numbered one that isn't &trans. So the order below is deliberate:
  *
- *   BASE (0) < LINUX (1) < SYM (2) < GAME (3) < NAV (4)
+ *   BASE (0) < LINUX (1) < SYM (2) < GAME (3) < NAV (4) < GAME2 (5)
  *
- * - NAV must sit above GAME, otherwise holding the NAV key while gaming would
- *   activate NAV underneath the gaming layer and you'd never see it.
+ * - GAME2 must sit above GAME, otherwise holding the GAME2 key while gaming would
+ *   activate GAME2 underneath the gaming layer and you'd never see it.
  * - LINUX is a tiny "overlay" that is normally OFF. It changes one key (see below).
  *   It must sit BELOW SYM so that holding SYM stops the BASE<->GAME combos from firing.
+ * - A layer's number comes from its position in the keymap below, so the layer
+ *   blocks must stay in this same order.
  *
  * Mapping to your names:
- *   BASE = Coding layer 1   SYM = Coding layer 2
- *   NAV  = Coding layer 3   GAME = Gaming layer
+ *   BASE = Coding layer 1   SYM = Coding layer 2   NAV = Coding layer 3
+ *   GAME = Gaming layer     GAME2 = Gaming function layer (held from GAME only)
  *
  * Layer 0 is the "default layer" and is always active at the bottom of the stack.
  */
@@ -33,6 +35,7 @@
 #define SYM   2
 #define GAME  3
 #define NAV   4
+#define GAME2 5
 
 /*
  * Key positions. Numbering is left-to-right, top-to-bottom:
@@ -46,6 +49,21 @@
  */
 
 / {
+    macros {
+        // Vim macro replays from the work layout (M3 / M4): types "@q" / "@w".
+        macro_at_q: macro_at_q {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&macro_tap &kp AT &kp Q>;
+        };
+
+        macro_at_w: macro_at_w {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings = <&macro_tap &kp AT &kp W>;
+        };
+    };
+
     behaviors {
         // Right encoder as a mouse scroll wheel: turn right = scroll down, turn left = scroll up.
         // On this board's right encoder the FIRST binding fires on a turn to the LEFT and the
@@ -159,22 +177,31 @@
 
         // ---------------------------------------------------------------------------------
         // Gaming layer. Reached by the 44+45 combo from BASE; the same combo returns.
-        // Every key is spelled out (no &trans) so nothing leaks through from BASE - in
-        // particular the SYM hold key at pos 54 is NOT active here.
-        // Differences from BASE: CAPS on the home-row pinky (where NAV is on BASE), a normal
-        // left-hand Tab / Caps / Shift / Ctrl / Alt column, no GUI key, no layer key on the
-        // home row. NAV is held with the left middle thumb (pos 54) instead.
-        // pos 44 / 45 (the combo keys) send [ and ] when tapped alone, so games can bind them.
-        // Pressing both together still toggles back to BASE.
+        // Every key is spelled out (no &trans) so nothing leaks through from BASE.
+        //
+        // ESDF SHIFT: the left half's letters are shifted one column toward the middle, so
+        // your fingers rest on the E S D F keys but the keyboard sends W A S D. Games need no
+        // rebinding. The outer column is freed up as extra pinky room.
+        //   Q row:  N    Tab   Q   [W]   E    R
+        //   home:   M    Caps [A]  [S]  [D]   F
+        //   bottom: -    Shift Z    X    C    V    B (pos 44)
+        // T and G don't fit on the left half any more; they're on GAME2.
+        // The number row is NOT shifted: 1-5 stay on the keys labelled 1-5.
+        // pos 0 (top-left) is a grave/backtick instead of Esc, so Esc can't be hit by
+        // accident; Esc is on GAME2. pos 38 (bottom-left) is unassigned for now.
+        // Thumbs: Alt, Ctrl, hold = GAME2, Space (innermost).
+        // pos 44 / 45 (the combo keys) send B and ] when tapped alone. Pressing both together
+        // still toggles back to BASE.
+        // The right half is a normal layout and isn't used much while gaming.
         // ---------------------------------------------------------------------------------
         game_layer {
             display-name = "GAME";
             bindings = <
-&kp ESC   &kp N1 &kp N2 &kp N3  &kp N4   &kp N5                              &kp N6    &kp N7  &kp N8    &kp N9   &kp N0   &kp EQUAL
-&kp TAB   &kp Q  &kp W  &kp E   &kp R    &kp T                               &kp Y     &kp U   &kp I     &kp O    &kp P    &kp BSPC
-&kp CAPS  &kp A  &kp S  &kp D   &kp F    &kp G   &none       &kp C_MUTE         &kp H     &kp J   &kp K     &kp L    &kp SEMI &kp SQT
-&kp LSHFT &kp Z  &kp X  &kp C   &kp V    &kp B   &kp LBKT    &kp RBKT        &kp N     &kp M   &kp COMMA &kp DOT  &kp FSLH &kp BSLH
-                        &kp LALT &kp LCTRL &mo NAV &kp SPACE  &kp BSPC &kp RET &kp RCTRL &none
+&kp GRAVE &kp N1   &kp N2 &kp N3 &kp N4  &kp N5                              &kp N6    &kp N7  &kp N8    &kp N9   &kp N0   &kp EQUAL
+&kp N     &kp TAB  &kp Q  &kp W  &kp E   &kp R                               &kp Y     &kp U   &kp I     &kp O    &kp P    &kp BSPC
+&kp M     &kp CAPS &kp A  &kp S  &kp D   &kp F   &none       &kp C_MUTE      &kp H     &kp J   &kp K     &kp L    &kp SEMI &kp SQT
+&none     &kp LSHFT &kp Z &kp X  &kp C   &kp V   &kp B       &kp RBKT        &kp N     &kp M   &kp COMMA &kp DOT  &kp FSLH &kp BSLH
+                        &kp LALT &kp LCTRL &mo GAME2 &kp SPACE &kp BSPC &kp RET &kp RCTRL &none
             >;
 
             sensor-bindings = <&inc_dec_kp PG_UP PG_DN &inc_dec_kp C_VOL_DN C_VOL_UP>;
@@ -182,20 +209,24 @@
 
         // ---------------------------------------------------------------------------------
         // Coding layer 3: function keys, arrows, media, macros (Corne layer 2).
-        // Hold pos 24 from BASE, or pos 54 from GAME. It sits on top of the stack while held,
-        // so releasing drops you back to whichever layer you were on. &trans keys fall through
-        // to GAME (if gaming) or BASE, so e.g. Shift and WASD keep working.
+        // Hold pos 24 from BASE. It sits on top of the stack while held, so releasing drops
+        // you back to BASE. &trans keys fall through to BASE.
+        // (Gaming has its own function layer, GAME2, so this layer is for coding only.)
         //
         // Number row (0-11): Lotus-only, so I used it for Bluetooth select/clear, bootloader,
         // and the Windows/Linux switch (pos 6 = &tog LINUX).
         // Bootloader keys: pos 0 (far-left key, top row) puts the LEFT half into bootloader
         // mode and pos 10 puts the RIGHT half into it - each reboots the half it's pressed on.
-        // Hold NAV, then press. You can also always double-tap the reset button instead.
-        // Left half is set up for gaming (NAV is held with pos 54 while on GAME):
-        //   W A S D (pos 14, 25, 26, 27) are &trans, so they pass straight through.
-        //   F1 = Q, F2 = E, F3 = R, F5 = T, F4 = F, F6 = G   (F6 is also at pos 18)
-        //   N = C, M = V   (so games can use them without reaching to the right half)
-        //   CAPS on the home-row pinky, LSHFT on the bottom-row pinky (pos 24 / 38)
+        // Hold NAV, then press. To reach them while gaming, leave GAME mode first.
+        // Windows virtual desktops (D1-D4 on the sheet):
+        //   pos 27 = previous desktop  (Win+Ctrl+Left)
+        //   pos 28 = next desktop      (Win+Ctrl+Right)
+        //   pos 29 = new desktop       (Win+Ctrl+D)
+        //   pos 26 = (D1, unassigned)
+        // Other keys, from the notes on the sheet:
+        //   M0 screenshot = Win+Shift+S (Snipping Tool), M1 screen recorder = Win+Alt+R (Xbox Game Bar)
+        //   M2 = Ctrl+Shift+F10 (PyCharm: run current file)
+        //   M3 / M4 = macros typing "@q" / "@w"
         //   pos 57 = Ctrl+B (tmux prefix)
         // F7 / F8 = VS Code prev / next terminal (just the function keys, as on the sheet).
         // pos 44 = Studio unlock (needed to edit this keymap live with ZMK Studio).
@@ -204,13 +235,36 @@
             display-name = "NAV";
             bindings = <
 &bootloader &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2 &bt BT_SEL 3 &bt BT_SEL 4              &tog LINUX &trans    &trans    &trans    &bootloader &bt BT_CLR
-&kp TAB   &kp F1   &trans   &kp F2   &kp F3   &kp F5                        &kp F6     &kp F7    &kp F8    &kp F9    &kp F10   &trans
-&kp CAPS  &trans   &trans   &trans   &kp F4   &kp F6   &trans   &trans      &kp LEFT   &kp DOWN  &kp UP    &kp RIGHT &trans    &trans
-&kp LSHFT &trans   &trans   &kp N    &kp M    &trans   &studio_unlock &trans  &kp C_PREV &kp C_PP &kp C_NEXT &kp C_VOL_DN &kp C_VOL_UP &kp RALT
+&kp TAB   &kp F1   &kp F2   &kp F3   &kp F4   &kp F5                        &kp F6     &kp F7    &kp F8    &kp F9    &kp F10   &trans
+&trans    &trans   &trans   &kp LG(LC(LEFT)) &kp LG(LC(RIGHT)) &kp LG(LC(D)) &trans &trans  &kp LEFT   &kp DOWN  &kp UP    &kp RIGHT &trans    &trans
+&trans    &macro_at_q &macro_at_w &kp LG(LA(R)) &kp LG(LS(S)) &kp LC(LS(F10)) &studio_unlock &trans  &kp C_PREV &kp C_PP &kp C_NEXT &kp C_VOL_DN &kp C_VOL_UP &kp RALT
                             &trans   &trans   &trans   &trans    &trans   &kp LC(B) &trans    &trans
             >;
 
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp PG_UP PG_DN>;
+        };
+
+        // ---------------------------------------------------------------------------------
+        // GAME2: gaming function layer. Hold the left thumb key pos 54 while on GAME.
+        // Movement keys (W A S D, on the physical E S D F keys) are &trans so you can keep
+        // moving while holding it. Everything &trans (shown as "." below) falls through to
+        // GAME, e.g. Caps, Shift, Z, X.
+        //   num row: .    6    7    8    9    0     (on the keys labelled 1-5)
+        //   Q row:   .    Esc  F1  [W]   F2   T
+        //   home:    PgUp .   [A]  [S]  [D]   G
+        //   bottom:  PgDn .    .    .    Play .     (Play = play/pause media)
+        // ---------------------------------------------------------------------------------
+        game2_layer {
+            display-name = "GAME2";
+            bindings = <
+&trans    &kp N6   &kp N7   &kp N8   &kp N9   &kp N0                        &trans    &trans    &trans    &trans    &trans    &trans
+&trans    &kp ESC  &kp F1   &trans   &kp F2   &kp T                         &trans    &trans    &trans    &trans    &trans    &trans
+&kp PG_UP &trans   &trans   &trans   &trans   &kp G    &trans   &trans      &trans    &trans    &trans    &trans    &trans    &trans
+&kp PG_DN &trans   &trans   &trans   &kp C_PP &trans   &trans   &trans      &trans    &trans    &trans    &trans    &trans    &trans
+                            &trans   &trans   &trans   &trans    &trans   &trans    &trans    &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp PG_UP PG_DN &inc_dec_kp C_VOL_DN C_VOL_UP>;
         };
     };
 };
