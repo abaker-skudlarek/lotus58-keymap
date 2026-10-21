@@ -182,14 +182,14 @@
         // ESDF SHIFT: the left half's letters are shifted one column toward the middle, so
         // your fingers rest on the E S D F keys but the keyboard sends W A S D. Games need no
         // rebinding. The outer column is freed up as extra pinky room.
-        //   Q row:  N    Tab   Q   [W]   E    R
+        //   Q row:  N    -     Q   [W]   E    R
         //   home:   M    Caps [A]  [S]  [D]   F
-        //   bottom: -    Shift Z    X    C    V    B (pos 44)
+        //   bottom: Ctrl Shift Z    X    C    V    B (pos 44)
         // T and G don't fit on the left half any more; they're on GAME2.
         // The number row is NOT shifted: 1-5 stay on the keys labelled 1-5.
         // pos 0 (top-left) is a grave/backtick instead of Esc, so Esc can't be hit by
-        // accident; Esc is on GAME2. pos 38 (bottom-left) is unassigned for now.
-        // Thumbs: Alt, Ctrl, hold = GAME2, Space (innermost).
+        // accident; Esc is on GAME2.
+        // Thumbs: Alt, Tab, hold = GAME2, Space (innermost).
         // pos 44 / 45 (the combo keys) send B and ] when tapped alone. Pressing both together
         // still toggles back to BASE.
         // The right half is a normal layout and isn't used much while gaming.
@@ -198,10 +198,10 @@
             display-name = "GAME";
             bindings = <
 &kp GRAVE &kp N1   &kp N2 &kp N3 &kp N4  &kp N5                              &kp N6    &kp N7  &kp N8    &kp N9   &kp N0   &kp EQUAL
-&kp N     &kp TAB  &kp Q  &kp W  &kp E   &kp R                               &kp Y     &kp U   &kp I     &kp O    &kp P    &kp BSPC
+&kp N     &none    &kp Q  &kp W  &kp E   &kp R                               &kp Y     &kp U   &kp I     &kp O    &kp P    &kp BSPC
 &kp M     &kp CAPS &kp A  &kp S  &kp D   &kp F   &none       &kp C_MUTE      &kp H     &kp J   &kp K     &kp L    &kp SEMI &kp SQT
-&none     &kp LSHFT &kp Z &kp X  &kp C   &kp V   &kp B       &kp RBKT        &kp N     &kp M   &kp COMMA &kp DOT  &kp FSLH &kp BSLH
-                        &kp LALT &kp LCTRL &mo GAME2 &kp SPACE &kp BSPC &kp RET &kp RCTRL &none
+&kp LCTRL &kp LSHFT &kp Z &kp X  &kp C   &kp V   &kp B       &kp RBKT        &kp N     &kp M   &kp COMMA &kp DOT  &kp FSLH &kp BSLH
+                        &kp LALT &kp TAB &mo GAME2 &kp SPACE &kp BSPC &kp RET &kp RCTRL &none
             >;
 
             sensor-bindings = <&inc_dec_kp PG_UP PG_DN &inc_dec_kp C_VOL_DN C_VOL_UP>;
